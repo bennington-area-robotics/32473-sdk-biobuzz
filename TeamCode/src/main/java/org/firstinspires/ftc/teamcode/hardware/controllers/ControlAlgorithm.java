@@ -17,4 +17,6 @@ public interface ControlAlgorithm {
     void setDirection(Direction direction);
 
     Direction getDirection();
+
+    boolean isBusy();
 }
