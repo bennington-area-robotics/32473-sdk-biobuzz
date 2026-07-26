@@ -4,55 +4,39 @@ package org.firstinspires.ftc.teamcode.hardware;
  * A class that converts an analog signal into a potentiometer based absolute encoder.
  * This class allows reading angular positions and adjusting offsets.
  */
-public class SmartPotentiometer extends Device implements Caching {
+public abstract class SmartPotentiometer extends Device implements Caching {
 	private final SmartAnalogInput input;
 	private final double maxAngle, maxVoltage;
 	private double offsetToZero;
 	private final HardwareCache<Double> rawAngleCache;
-	private boolean normalize;
 
 	/**
-	 * Constructs a `SmartPotentiometer` instance with the given parameters.
+	 * Constructs a `RevPotentiometer` instance with the given parameters.
 	 *
 	 * @param input      The `AnalogInput` representing the potentiometer's analog sensor.
 	 * @param name       The unique name used for persistent storage of the offset value.
 	 * @param maxAngle   The maximum angle (in degrees) the potentiometer can measure.
 	 * @param maxVoltage The maximum voltage output of the potentiometer at its highest position.
 	 */
-	SmartPotentiometer(SmartAnalogInput input, String name, double maxAngle, double maxVoltage) {
-		super(name);
-		this.input = input;
-		this.maxAngle = maxAngle;
-		this.maxVoltage = maxVoltage;
-		this.offsetToZero = 0;
-		this.rawAngleCache = new HardwareCache<>(() -> voltageToAngle(input.getVoltage()));
-		this.normalize = false;
+    protected SmartPotentiometer(SmartAnalogInput input, String name, double maxAngle, double maxVoltage) {
+		this(input, name, maxAngle, maxVoltage, 0);
 	}
 
 	/**
-	 * Constructs a `SmartPotentiometer` instance with the given parameters.
+	 * Constructs a `RevPotentiometer` instance with the given parameters.
 	 *
 	 * @param input      The `AnalogInput` representing the potentiometer's analog sensor.
 	 * @param name       The unique name used for persistent storage of the offset value.
 	 * @param maxAngle   The maximum angle (in degrees) the potentiometer can measure.
 	 * @param maxVoltage The maximum voltage output of the potentiometer at its highest position.
 	 */
-	SmartPotentiometer(SmartAnalogInput input, String name, double maxAngle, double maxVoltage, double offset) {
+	protected SmartPotentiometer(SmartAnalogInput input, String name, double maxAngle, double maxVoltage, double offset) {
 		super(name);
 		this.input = input;
 		this.maxAngle = maxAngle;
 		this.maxVoltage = maxVoltage;
 		this.offsetToZero = offset;
 		this.rawAngleCache = new HardwareCache<>(() -> voltageToAngle(input.getVoltage()));
-		this.normalize = false;
-	}
-
-	public boolean isNormalizing(){
-		return normalize;
-	}
-
-	public void setNormalize(boolean normalize){
-		this.normalize = normalize;
 	}
 
 	public void setOffset(double offset){
@@ -65,9 +49,6 @@ public class SmartPotentiometer extends Device implements Caching {
 	 * @return The adjusted angular position in degrees.
 	 */
 	public double getAngle() {
-		if(normalize){
-			return normalizeAngle(getRawAngle() + offsetToZero, maxAngle);
-		}
 		return getRawAngle() + offsetToZero;
 	}
 
@@ -83,7 +64,7 @@ public class SmartPotentiometer extends Device implements Caching {
 
 	/**
 	 * Resets the potentiometer's zero position to the current raw angle.
-	 * This effectively sets the current position as the new zero and saves the offset persistently.
+	 * This effectively sets the current position as the new zero and saves the offset.
 	 */
 	public void reset() {
 		offsetToZero = -getRawAngle();
@@ -148,7 +129,5 @@ public class SmartPotentiometer extends Device implements Caching {
 		return rawAngleCache.getStrategy();
 	}
 
-	private static double voltageToAngle(double v){
-		return -1.96682 * Math.pow(v, 3) - 7.04864 * Math.pow(v, 2) + 126.39282 * v;
-	}
+	protected abstract double voltageToAngle(double v);
 }

@@ -1,8 +1,6 @@
 package org.firstinspires.ftc.teamcode.hardware.controllers;
 
-import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.utilities.Direction;
-import org.firstinspires.ftc.teamcode.utilities.Notifier;
 
 import java.util.function.DoubleSupplier;
 
@@ -14,49 +12,22 @@ import java.util.function.DoubleSupplier;
  * The controller uses PIDF (Proportional, Integral, Derivative, and Feedforward) terms to calculate
  * the output based on the error between the target and actual values.
  */
-public class PID implements ControlAlgorithm {
-    protected double integral, lastError, tolerance, minimum, result;
-    protected double pResult, iResult, dResult, fResult;
-    protected final ElapsedTime timer = new ElapsedTime();
-    boolean isBusy = true;
-    protected Direction direction;
-    Notifier noLongerBusyNotifier = new Notifier();
+public class PID extends BasePIDController implements PositionControlAlgorithm {
+    protected boolean directionalKF = true;
 
     protected final DoubleSupplier kP, kI, kD, kF;
 
-    protected PID(DoubleSupplier kP, DoubleSupplier kI, DoubleSupplier kD, DoubleSupplier kF, double tolerance) {
+    protected PID(DoubleSupplier kP, DoubleSupplier kI, DoubleSupplier kD, DoubleSupplier kF, double tolerance, boolean directionalKF) {
+        super(tolerance);
         this.kP = kP;
         this.kI = kI;
         this.kD = kD;
         this.kF = kF;
-        this.tolerance = tolerance;
-    }
-
-    /**
-     * Sets the direction of the PID controller. This will determine whether the output
-     * should be reversed or not.
-     *
-     * @param direction The direction to set for the controller. It can be either {@link Direction#FORWARD} or {@link Direction#REVERSE}.
-     */
-    public void setDirection(Direction direction) {
-        this.direction = direction;
-    }
-
-    /**
-     * Gets the current direction of the PID controller.
-     *
-     * @return The current direction of the controller.
-     */
-    public Direction getDirection() {
-        return direction;
+        this.directionalKF = directionalKF;
     }
 
     @Override
-    public Notifier getNoLongerBusyNotifier() {
-        return noLongerBusyNotifier;
-    }
-
-    public double calc(double target, double actual) {
+    public double calcPosition(double target, double actual) {
         return calc(target, actual, kP.getAsDouble(), kI.getAsDouble(), kD.getAsDouble(), kF.getAsDouble());
     }
 
@@ -77,7 +48,14 @@ public class PID implements ControlAlgorithm {
 
             lastError = currentError;
 
-            double output = p + integral + d + kF;
+            double output;
+            if(directionalKF) {
+                output = p + integral + d + kF * (Math.signum(currentError));
+                fResult = kF * Math.signum(currentError);
+            } else {
+                output = p + integral + d + kF;
+                fResult = kF;
+            }
 
             if (direction == Direction.REVERSE) {
                 output = -output;
@@ -86,7 +64,7 @@ public class PID implements ControlAlgorithm {
             pResult = p;
             iResult = integral;
             dResult = d;
-            fResult = kF;
+
 
 
             result = output;
@@ -101,76 +79,29 @@ public class PID implements ControlAlgorithm {
             isBusy = false;
         }
 
-        if(lastIsBusy && !isBusy)
-            noLongerBusyNotifier.notifyWaitingThreads();
+        notifyIfNoLongerBusy(lastIsBusy);
 
         // Return the last calculated output.
         return result;
     }
 
-    /**
-     * Gets the most recent result from the PID controller.
-     * This is the output of the last call to {@link #calc(double, double)}.
-     *
-     * @return The last calculated output of the PID controller.
-     */
-    public double result() {
-        return result;
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public double pResult(){
-        return pResult;
-    }
+    public static class Builder extends CoefficientBuilderBase<Builder> {
+        private boolean directionalKF = true;
 
-    public double iResult(){
-        return iResult;
-    }
-
-    public double dResult(){
-        return dResult;
-    }
-
-    public double fResult(){
-        return fResult;
-    }
-
-    @Override
-    public boolean isBusy() {
-        return isBusy;
-    }
-
-    /**
-     * Sets the tolerance for the PID controller.
-     * If the error is within this tolerance, the controller will stop adjusting the output.
-     *
-     * @param tolerance The tolerance value to set.
-     */
-    public void setTolerance(double tolerance) {
-        this.tolerance = tolerance;
-    }
-
-    public double getTolerance(){
-        return tolerance;
-    }
-
-
-    public static class Builder {
-        private DoubleSupplier kP = () -> 0, kI = () -> 0, kD = () -> 0, kF = () -> 0;
-        private double tolerance;
-
-        public Builder setKP(double kP) { this.kP = () -> kP; return this; }
-        public Builder setKI(double kI) { this.kI = () -> kI; return this; }
-        public Builder setKD(double kD) { this.kD = () -> kD; return this; }
-        public Builder setKF(double kF) { this.kF = () -> kF; return this; }
-        public Builder setKP(DoubleSupplier kP) { this.kP = kP; return this; }
-        public Builder setKI(DoubleSupplier kI) { this.kI = kI; return this; }
-        public Builder setKD(DoubleSupplier kD) { this.kD = kD; return this; }
-        public Builder setKF(DoubleSupplier kF) { this.kF = kF; return this; }
-        public Builder setTolerance(double tolerance) {
-            this.tolerance = tolerance;
+        @Override
+        protected Builder self() {
             return this;
         }
 
-        public PID build() { return new PID(kP, kI, kD, kF, tolerance); }
+        public Builder setDirectionalKF(boolean directionalKF) {
+            this.directionalKF = directionalKF;
+            return this;
+        }
+
+        public PID build() { return new PID(kP, kI, kD, kF, tolerance,  directionalKF); }
     }
 }

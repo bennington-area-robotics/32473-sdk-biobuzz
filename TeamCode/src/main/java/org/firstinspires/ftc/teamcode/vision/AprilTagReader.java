@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.vision;
 
-import com.bylazar.configurables.annotations.Configurable;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.teamcode.hardware.SmartCamera;
 import org.firstinspires.ftc.teamcode.utilities.Pose;
@@ -11,12 +10,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Configurable
 public class AprilTagReader {
 
 
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
-    //todo test different values of decimation also test different PoseSolvers
 
     private boolean isInitialized = false;
 
@@ -44,7 +41,7 @@ public class AprilTagReader {
             VisionPortal.Builder builder = new VisionPortal.Builder();
 
             if (USE_WEBCAM) {
-                builder.setCamera(camera.passable());
+                builder.setCamera(camera.getRaw());
             } else {
                 builder.setCamera(BuiltinCameraDirection.BACK);
             }

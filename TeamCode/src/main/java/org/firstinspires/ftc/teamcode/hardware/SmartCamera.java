@@ -14,13 +14,12 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 import org.firstinspires.ftc.robotcore.internal.camera.delegating.SwitchableCameraName;
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 import org.firstinspires.ftc.teamcode.utilities.Pose;
+import org.firstinspires.ftc.vision.opencv.ImageRegion;
+import org.firstinspires.ftc.vision.opencv.PredominantColorProcessor;
 
-public class SmartCamera extends Device implements CameraName {
+public class SmartCamera extends Device implements CameraName, WrappedDevice<CameraName> {
     private final CameraName cameraName;
-    private final String name;
     private final Pose pose;
-
-    //todo make this wrap WebcamName
 
     /**
      * @param cameraName base camera object to operate on.
@@ -30,11 +29,11 @@ public class SmartCamera extends Device implements CameraName {
     SmartCamera(CameraName cameraName, String name, Pose pose){
         super(name);
         this.cameraName = cameraName;
-        this.name = cameraName.toString();
         this.pose = pose.plusPitch(-90);
     }
 
-    public CameraName passable(){
+    @Override
+    public CameraName getRaw() {
         return cameraName;
     }
 
@@ -47,15 +46,31 @@ public class SmartCamera extends Device implements CameraName {
     }
 
     public String getName(){
-        return name;
+        return getConfigName();
     }
 
     public Pose getPose(){
         return pose;
     }
 
+    public SmartCameraColorSensor asColorSensor() {
+        return new SmartCameraColorSensor(this, ColorMatchConfig.frontProfile());
+    }
+
+    public SmartCameraColorSensor asColorSensor(
+            ColorMatchConfig.ColorMatchProfile colorProfile,
+            ImageRegion roi,
+            PredominantColorProcessor.Swatch... swatches
+    ) {
+        return new SmartCameraColorSensor(this, colorProfile, roi, swatches);
+    }
+
+    public SmartCameraColorSensor asColorSensor(ColorMatchConfig.ColorMatchProfile colorProfile) {
+        return new SmartCameraColorSensor(this, colorProfile);
+    }
+
     public Size getResolution(){
-        org.firstinspires.ftc.robotcore.external.android.util.Size ftcSize = cameraName.getCameraCharacteristics().getDefaultSize(ImageFormat.YUY2);
+        org.firstinspires.ftc.robotcore.external.android.util.Size ftcSize = getRaw().getCameraCharacteristics().getDefaultSize(ImageFormat.YUY2);
         return new Size(ftcSize.getWidth(), ftcSize.getHeight());
     }
 
@@ -68,7 +83,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public boolean isWebcam() {
-        return cameraName.isWebcam();
+        return getRaw().isWebcam();
     }
 
     /**
@@ -80,7 +95,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public boolean isCameraDirection() {
-        return cameraName.isCameraDirection();
+        return getRaw().isCameraDirection();
     }
 
     /**
@@ -92,7 +107,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public boolean isSwitchable() {
-        return cameraName.isSwitchable();
+        return getRaw().isSwitchable();
     }
 
     /**
@@ -102,7 +117,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public boolean isUnknown() {
-        return cameraName.isUnknown();
+        return getRaw().isUnknown();
     }
 
     /**
@@ -124,7 +139,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public void asyncRequestCameraPermission(Context context, Deadline deadline, Continuation<? extends Consumer<Boolean>> continuation) {
-        cameraName.asyncRequestCameraPermission(context, deadline, continuation);
+        getRaw().asyncRequestCameraPermission(context, deadline, continuation);
     }
 
     /**
@@ -138,7 +153,7 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public boolean requestCameraPermission(Deadline deadline) {
-        return cameraName.requestCameraPermission(deadline);
+        return getRaw().requestCameraPermission(deadline);
     }
 
     /**
@@ -149,6 +164,6 @@ public class SmartCamera extends Device implements CameraName {
      */
     @Override
     public CameraCharacteristics getCameraCharacteristics() {
-        return cameraName.getCameraCharacteristics();
+        return getRaw().getCameraCharacteristics();
     }
 }

@@ -2,24 +2,52 @@ package org.firstinspires.ftc.teamcode.hardware;
 
 import android.graphics.Color;
 import androidx.annotation.NonNull;
-import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
+import org.firstinspires.ftc.teamcode.hardware.filters.DataFilter;
+import org.firstinspires.ftc.teamcode.hardware.filters.RollingAverage;
+import org.firstinspires.ftc.teamcode.utilities.LiveMatchTuning;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.jetbrains.annotations.NotNull;
 
-@Configurable
-public class SmartColorSensor extends Device implements NormalizedColorSensor, Caching {
-
-    NormalizedColorSensor colorSensor;
-    HardwareCache<NormalizedRGBA> colorCache;
+public class SmartColorSensor extends Device implements NormalizedColorSensor, Caching, ScoringColorSensor, WrappedDevice<NormalizedColorSensor> {
+    private final NormalizedColorSensor colorSensor;
+    private final HardwareCache<NormalizedRGBA> colorCache;
+    private final HardwareCache<HsvReading> hsvCache;
+    private final HardwareCache<Double> distanceCacheMm;
+    private final ColorMatchConfig.ColorMatchProfile colorProfile;
+    private DataFilter hueFilter = DataFilter.NONE;
+    private DataFilter saturationFilter = DataFilter.NONE;
+    private DataFilter valueFilter = DataFilter.NONE;
+    private int appliedHueFilterWindow = Integer.MIN_VALUE;
+    private int appliedSaturationFilterWindow = Integer.MIN_VALUE;
+    private int appliedValueFilterWindow = Integer.MIN_VALUE;
+    private int appliedGain = Integer.MIN_VALUE;
 
     SmartColorSensor(NormalizedColorSensor colorSensor, String configName) {
+        this(colorSensor, configName, ColorMatchConfig.frontProfile());
+    }
+
+    SmartColorSensor(
+            NormalizedColorSensor colorSensor,
+            String configName,
+            ColorMatchConfig.ColorMatchProfile colorProfile
+    ) {
         super(configName);
         this.colorSensor = colorSensor;
-        colorCache = new HardwareCache<>(colorSensor::getNormalizedColors);
-        colorSensor.setGain(ColorMatchConfig.GAIN);
+        this.colorProfile = colorProfile == null ? ColorMatchConfig.frontProfile() : colorProfile;
+        this.colorCache = new HardwareCache<>(colorSensor::getNormalizedColors);
+        this.hsvCache = new HardwareCache<>(this::computeCachedHsvReading);
+        this.distanceCacheMm = colorSensor instanceof DistanceSensor
+                ? new HardwareCache<>(() -> ((DistanceSensor) colorSensor).getDistance(DistanceUnit.MM))
+                : null;
+        syncConfiguredGain();
+    }
+
+    @Override
+    public NormalizedColorSensor getRaw() {
+        return colorSensor;
     }
 
     /**
@@ -27,9 +55,32 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      * @return array containing the Hue, Saturation and Value floats in that order.
      */
     public float[] getHSV() {
-        float[] hsv = new float[3];
-        Color.colorToHSV(getNormalizedColors().toColor(), hsv);
-        return hsv;
+        syncConfiguredGain();
+        syncConfiguredFilters();
+        HsvReading hsv = hsvCache.read();
+        return new float[]{hsv.hue, hsv.saturation, hsv.value};
+    }
+
+    public void setHsvFilters(DataFilter hueFilter, DataFilter saturationFilter, DataFilter valueFilter) {
+        this.hueFilter = hueFilter == null ? DataFilter.NONE : hueFilter;
+        this.saturationFilter = saturationFilter == null ? DataFilter.NONE : saturationFilter;
+        this.valueFilter = valueFilter == null ? DataFilter.NONE : valueFilter;
+        this.appliedHueFilterWindow = Integer.MIN_VALUE;
+        this.appliedSaturationFilterWindow = Integer.MIN_VALUE;
+        this.appliedValueFilterWindow = Integer.MIN_VALUE;
+        hsvCache.invalidateCache();
+    }
+
+    public void setHsvRollingAverageWindow(int window) {
+        if (window <= 0) {
+            setHsvFilters(DataFilter.NONE, DataFilter.NONE, DataFilter.NONE);
+            return;
+        }
+        setHsvFilters(
+                new RollingAverage(window),
+                new RollingAverage(window),
+                new RollingAverage(window)
+        );
     }
 
     /**
@@ -38,8 +89,8 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      * @throws IllegalStateException if this color sensor does not support distance sensing. You can check this programmatically by calling hasDistanceSensing().
      */
     public double getDistance(DistanceUnit distanceUnit){
-        if (colorSensor instanceof DistanceSensor) {
-            return ((DistanceSensor) colorSensor).getDistance(distanceUnit);
+        if (distanceCacheMm != null) {
+            return distanceUnit.fromUnit(DistanceUnit.MM, distanceCacheMm.read());
         }else {
             throw new IllegalStateException("Color sensor is not an instance of DistanceSensor, this color sensor likely doesn't support distance sensing.");
         }
@@ -50,7 +101,7 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      * @return whether this color sensor supports distance sensing.
      */
     public boolean hasDistanceSensing(){
-        return colorSensor instanceof DistanceSensor;
+        return distanceCacheMm != null;
     }
 
     /**
@@ -61,34 +112,7 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      */
     public @NonNull ScoringElementColor getScoringElementColor() {
         float[] hsv = getHSV();
-        float hue = hsv[0];
-        float saturation = hsv[1];
-        float value = hsv[2];
-
-        // Ensure minimum valid saturation and value (not black/white/gray)
-        if (saturation < ColorMatchConfig.MIN_SATURATION || value < ColorMatchConfig.MIN_VALUE) {
-            return ScoringElementColor.NONE;
-        }
-
-        // Normalize hue to 0-360 range
-        hue = hue % 360;
-        if (hue < 0) hue += 360;
-
-        // Find the best matching preset color
-        ColorMatchConfig.ColorPreset bestMatch = null;
-        float bestConfidence = 0.0f;
-
-        for (ColorMatchConfig.ColorPreset preset : ColorMatchConfig.ACTIVE_PRESETS) {
-            if (preset.matches(hue, saturation, value)) {
-                float confidence = preset.getMatchConfidence(hue, saturation, value);
-                if (confidence > bestConfidence) {
-                    bestConfidence = confidence;
-                    bestMatch = preset;
-                }
-            }
-        }
-
-        return bestMatch != null ? bestMatch.color : ScoringElementColor.NONE;
+        return matchScoringElementColor(colorProfile, hsv[0], hsv[1], hsv[2]);
     }
 
     /**
@@ -96,32 +120,73 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      *
      * @return ColorMatchResult containing the detected color, HSV values, and match confidence
      */
+    @Override
     public ColorMatchResult getColorMatchResult() {
         float[] hsv = getHSV();
-        float hue = hsv[0];
-        float saturation = hsv[1];
-        float value = hsv[2];
+        return getColorMatchResult(colorProfile, hsv[0], hsv[1], hsv[2]);
+    }
 
-        // Normalize hue
-        hue = hue % 360;
-        if (hue < 0) hue += 360;
+    /**
+     * Runs configured scoring-element color matching for arbitrary HSV data.
+     *
+     * @param profile DI-injected profile used for matching
+     * @param hue hue in 0-360 range (values outside range are normalized)
+     * @param saturation saturation in 0-1 range
+     * @param value value/brightness in 0-1 range
+     * @return matched scoring element color or NONE when thresholds/matching fail
+     */
+    public static @NonNull ScoringElementColor matchScoringElementColor(
+            ColorMatchConfig.ColorMatchProfile profile,
+            float hue,
+            float saturation,
+            float value
+    ) {
+        return getColorMatchResult(profile, hue, saturation, value).detectedColor;
+    }
 
-        // Find the best matching preset color
+    /**
+     * Returns detailed matching result for arbitrary HSV input.
+     *
+     * @param profile DI-injected profile used for matching
+     * @param hue hue in 0-360 range (values outside range are normalized)
+     * @param saturation saturation in 0-1 range
+     * @param value value/brightness in 0-1 range
+     * @return scoring match details and confidence
+     */
+    public static ColorMatchResult getColorMatchResult(
+            ColorMatchConfig.ColorMatchProfile profile,
+            float hue,
+            float saturation,
+            float value
+    ) {
+        ColorMatchConfig.ColorMatchProfile safeProfile = profile == null
+                ? ColorMatchConfig.frontProfile()
+                : profile;
+        float minSaturationThreshold = safeProfile.minSaturation();
+        float minValueThreshold = safeProfile.minValue();
+        float hueTolerance = safeProfile.hueTolerance();
+        ColorMatchConfig.ColorPreset[] activePresets = safeProfile.activePresets();
+
+        hue = normalizeHue(hue);
+
+        if (saturation < minSaturationThreshold || value < minValueThreshold) {
+            return new ColorMatchResult(ScoringElementColor.NONE, hue, saturation, value, 0.0f);
+        }
+
         ColorMatchConfig.ColorPreset bestMatch = null;
         float bestConfidence = 0.0f;
 
-        for (ColorMatchConfig.ColorPreset preset : ColorMatchConfig.ACTIVE_PRESETS) {
-            float confidence = preset.getMatchConfidence(hue, saturation, value);
-            if (confidence > bestConfidence) {
-                bestConfidence = confidence;
-                bestMatch = preset;
+        for (ColorMatchConfig.ColorPreset preset : activePresets) {
+            if (preset.matches(hue, saturation, value, hueTolerance)) {
+                float confidence = preset.getMatchConfidence(hue, saturation, value, hueTolerance);
+                if (confidence > bestConfidence) {
+                    bestConfidence = confidence;
+                    bestMatch = preset;
+                }
             }
         }
 
-        ScoringElementColor detectedColor = (bestMatch != null && bestConfidence > 0)
-                ? bestMatch.color
-                : ScoringElementColor.NONE;
-
+        ScoringElementColor detectedColor = bestMatch != null ? bestMatch.color : ScoringElementColor.NONE;
         return new ColorMatchResult(detectedColor, hue, saturation, value, bestConfidence);
     }
 
@@ -130,6 +195,7 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
             throw new IllegalArgumentException("Gain must be positive");
 
         colorSensor.setGain(gain);
+        appliedGain = (int) gain;
     }
 
     /**
@@ -139,11 +205,51 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      */
     @Override
     public NormalizedRGBA getNormalizedColors() {
+        syncConfiguredGain();
         return colorCache.read();
     }
 
     public float getGain(){
         return colorSensor.getGain();
+    }
+
+    private void syncConfiguredGain() {
+        int configuredGain = Math.max(1, colorProfile.gain());
+        if (configuredGain != appliedGain) {
+            colorSensor.setGain(configuredGain);
+            appliedGain = configuredGain;
+        }
+    }
+
+    private void syncConfiguredFilters() {
+        int hueWindow = Math.max(0, LiveMatchTuning.colorSensorHueFilterWindow);
+        int saturationWindow = Math.max(0, LiveMatchTuning.colorSensorSaturationFilterWindow);
+        int valueWindow = Math.max(0, LiveMatchTuning.colorSensorValueFilterWindow);
+
+        if (hueWindow != appliedHueFilterWindow) {
+            hueFilter = hueWindow == 0 ? DataFilter.NONE : new RollingAverage(hueWindow);
+            appliedHueFilterWindow = hueWindow;
+        }
+        if (saturationWindow != appliedSaturationFilterWindow) {
+            saturationFilter = saturationWindow == 0 ? DataFilter.NONE : new RollingAverage(saturationWindow);
+            appliedSaturationFilterWindow = saturationWindow;
+        }
+        if (valueWindow != appliedValueFilterWindow) {
+            valueFilter = valueWindow == 0 ? DataFilter.NONE : new RollingAverage(valueWindow);
+            appliedValueFilterWindow = valueWindow;
+        }
+    }
+
+    private static float normalizeHue(float hue) {
+        float normalized = hue % 360f;
+        if (normalized < 0f) {
+            normalized += 360f;
+        }
+        return normalized;
+    }
+
+    private static float clamp01(float value) {
+        return Math.max(0f, Math.min(1f, value));
     }
 
     /**
@@ -210,7 +316,13 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      */
     @Override
     public void invalidateCache() {
+        syncConfiguredGain();
+        syncConfiguredFilters();
         colorCache.invalidateCache();
+        hsvCache.invalidateCache();
+        if (distanceCacheMm != null) {
+            distanceCacheMm.invalidateCache();
+        }
     }
 
     /**
@@ -218,7 +330,13 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
      */
     @Override
     public void updateCache() {
+        syncConfiguredGain();
+        syncConfiguredFilters();
         colorCache.updateCache();
+        hsvCache.updateCache();
+        if (distanceCacheMm != null) {
+            distanceCacheMm.updateCache();
+        }
     }
 
     /**
@@ -227,6 +345,10 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
     @Override
     public void setStrategy(Strategy strategy) {
         colorCache.setStrategy(strategy);
+        hsvCache.setStrategy(strategy);
+        if (distanceCacheMm != null) {
+            distanceCacheMm.setStrategy(strategy);
+        }
     }
 
     /**
@@ -261,6 +383,28 @@ public class SmartColorSensor extends Device implements NormalizedColorSensor, C
         public String toString() {
             return String.format("Color: %s, HSV: (%.1f, %.2f, %.2f), Confidence: %.2f",
                     detectedColor, hue, saturation, value, confidence);
+        }
+    }
+
+    private HsvReading computeCachedHsvReading() {
+        float[] hsv = new float[3];
+        Color.colorToHSV(colorCache.read().toColor(), hsv);
+        return new HsvReading(
+                normalizeHue((float) hueFilter.compute(hsv[0])),
+                clamp01((float) saturationFilter.compute(hsv[1])),
+                clamp01((float) valueFilter.compute(hsv[2]))
+        );
+    }
+
+    private static final class HsvReading {
+        private final float hue;
+        private final float saturation;
+        private final float value;
+
+        private HsvReading(float hue, float saturation, float value) {
+            this.hue = hue;
+            this.saturation = saturation;
+            this.value = value;
         }
     }
 }
