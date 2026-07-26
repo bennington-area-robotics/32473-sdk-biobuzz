@@ -10,7 +10,6 @@ import org.firstinspires.ftc.teamcode.components.LaunchControl;
 import org.firstinspires.ftc.teamcode.components.Launcher;
 import org.firstinspires.ftc.teamcode.core.SmartGamepad;
 import org.firstinspires.ftc.teamcode.core.TeleOpCore;
-import org.firstinspires.ftc.teamcode.hardware.Hardware;
 
 import java.util.Objects;
 
@@ -23,11 +22,11 @@ public class MajorTomTeleOp extends TeleOpCore {
     protected static LaunchControl launchControl;
 
     @Override
-    protected void initialize() {
-        super.initialize();
+    protected void onInitialize() {
+        super.onInitialize();
 
         try {
-            driveBase = new DriveBase();
+            driveBase = new DriveBase(hardware);
         } catch (Exception e) {
             prettyTelem.error("Drive base failed to initialize, skipping: " + e.getMessage());
         }
@@ -43,7 +42,7 @@ public class MajorTomTeleOp extends TeleOpCore {
 
         try {
             intake = new Intake(
-                Hardware.getMotor("intakeMotor")
+                hardware.getMotor("intakeMotor")
             );
         } catch (Exception e) {
             prettyTelem.error("Intake motor failed to initialize, skipping: " + e.getMessage());
@@ -51,7 +50,7 @@ public class MajorTomTeleOp extends TeleOpCore {
 
         try {
             launcher = new Launcher(
-                Hardware.getMotor("launchMotor")
+                hardware.getMotor("launchMotor")
             );
         } catch (Exception e) {
             prettyTelem.error("Launch motor failed to initialize, skipping: " + e.getMessage());
@@ -68,7 +67,7 @@ public class MajorTomTeleOp extends TeleOpCore {
     }
 
     @Override
-    protected void run(){
+    protected void onRun(){
         launchControl.startIdling();
     }
 
@@ -131,9 +130,7 @@ public class MajorTomTeleOp extends TeleOpCore {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-
+    protected void onTick() {
         if (launchControl != null) {
             launchControl.tick();
         }

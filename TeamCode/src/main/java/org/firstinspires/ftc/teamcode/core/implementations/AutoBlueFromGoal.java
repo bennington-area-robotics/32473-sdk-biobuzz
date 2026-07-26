@@ -8,7 +8,6 @@ import org.firstinspires.ftc.teamcode.components.Feeders;
 import org.firstinspires.ftc.teamcode.components.LaunchControl;
 import org.firstinspires.ftc.teamcode.components.Launcher;
 import org.firstinspires.ftc.teamcode.core.OpModeCore;
-import org.firstinspires.ftc.teamcode.hardware.Hardware;
 
 @com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "Auto Blue From Goal")
 public class AutoBlueFromGoal extends OpModeCore {
@@ -28,9 +27,7 @@ public class AutoBlueFromGoal extends OpModeCore {
 
 
     @Override
-    public void tick() {
-        super.tick();
-
+    protected void onTick() {
         switch (state) {
             case("START"): {
                 timer.reset();
@@ -55,11 +52,9 @@ public class AutoBlueFromGoal extends OpModeCore {
     }
 
     @Override
-    protected void initialize() {
-        super.initialize();
-
+    protected void onInitialize() {
         try {
-            driveBase = new DriveBase();
+            driveBase = new DriveBase(hardware);
         } catch (Exception e) {
             prettyTelem.error("Drive base failed to initialize, skipping: " + e.getMessage());
         }
@@ -75,7 +70,7 @@ public class AutoBlueFromGoal extends OpModeCore {
 
         try {
             launcher = new Launcher(
-                    Hardware.getMotor("launchMotor")
+                    hardware.getMotor("launchMotor")
             );
         } catch (Exception e) {
             prettyTelem.error("Launch motor failed to initialize, skipping: " + e.getMessage());

@@ -10,11 +10,11 @@ public class DriveBase {
     private final SmartMotor leftFront, leftBack, rightFront, rightBack;
     private double powerFactor = 0.5;
 
-    public DriveBase() {
-        leftFront = Hardware.getMotor("leftFrontMotor");
-        leftBack = Hardware.getMotor("leftBackMotor");
-        rightFront = Hardware.getMotor("rightFrontMotor");
-        rightBack = Hardware.getMotor("rightBackMotor");
+    public DriveBase(Hardware hardware) {
+        leftFront = hardware.getMotor("leftFrontMotor");
+        leftBack = hardware.getMotor("leftBackMotor");
+        rightFront = hardware.getMotor("rightFrontMotor");
+        rightBack = hardware.getMotor("rightBackMotor");
 
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);

@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.core.OpModeCore;
-import org.firstinspires.ftc.teamcode.hardware.Hardware;
 import org.firstinspires.ftc.teamcode.hardware.SmartMotor;
 
 @TeleOp(name = "OmniMotorTest")
@@ -21,13 +20,11 @@ public class OmniDriveTest extends OpModeCore {
     private SmartMotor rightBackMotor;
 
     @Override
-    public void initialize() {
-        super.initialize();
-
-        leftFrontMotor = Hardware.getMotor("leftFrontMotor");
-        leftBackMotor = Hardware.getMotor("leftBackMotor");
-        rightFrontMotor = Hardware.getMotor("rightFrontMotor");
-        rightBackMotor = Hardware.getMotor("rightBackMotor");
+    protected void onInitialize() {
+        leftFrontMotor = hardware.getMotor("leftFrontMotor");
+        leftBackMotor = hardware.getMotor("leftBackMotor");
+        rightFrontMotor = hardware.getMotor("rightFrontMotor");
+        rightBackMotor = hardware.getMotor("rightBackMotor");
 
         leftFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -36,9 +33,7 @@ public class OmniDriveTest extends OpModeCore {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-
+    protected void onTick() {
         double scaledY = Math.signum(gamepad1.left_stick_y) * Math.pow(Math.abs(gamepad1.left_stick_y), 2) * maxSpeed;
         double scaledX = Math.signum(gamepad1.left_stick_x) * Math.pow(Math.abs(gamepad1.left_stick_x), 2) * maxSpeed;
         double scaledR = Math.signum(gamepad1.right_stick_x) * Math.pow(Math.abs(gamepad1.right_stick_x), 2) * maxSpeed;

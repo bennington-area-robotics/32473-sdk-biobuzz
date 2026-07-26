@@ -53,7 +53,7 @@ public class Launcher {
     }
 
     public void tick(){
-        motor.setPower(controller.calcWithVelocity(targetVelocity, getCurrentVelocity()));
+        motor.setPower(controller.calcVelocity(targetVelocity, getCurrentVelocity()));
     }
 
     public double getCurrentVelocity() {

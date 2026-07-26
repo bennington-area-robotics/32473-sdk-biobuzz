@@ -20,9 +20,7 @@ public class AutoBlueFromFar extends TeleOpCore {
 
 
     @Override
-    public void tick() {
-        super.tick();
-
+    protected void onTick() {
         switch (state) {
             case("START"): {
                 timer.reset();
@@ -44,11 +42,11 @@ public class AutoBlueFromFar extends TeleOpCore {
     }
 
     @Override
-    protected void initialize() {
-        super.initialize();
+    protected void onInitialize() {
+        super.onInitialize();
 
         try {
-            driveBase = new DriveBase();
+            driveBase = new DriveBase(hardware);
         } catch (Exception e) {
             prettyTelem.error("Drive base failed to initialize, skipping: " + e.getMessage());
         }
