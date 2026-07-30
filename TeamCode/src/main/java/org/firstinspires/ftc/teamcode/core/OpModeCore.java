@@ -47,14 +47,22 @@ public abstract class OpModeCore extends LinearOpMode {
 	}
 
 	/**
-	 * Performs one-time framework initialization and then invokes {@link #onInitialize()} for subclass setup.
+	 * Performs one-time framework initialization, runs framework pre-initialization,
+	 * and then invokes {@link #onInitialize()} for subclass setup.
 	 */
 	protected final void initialize(){
 		this.hardware = new Hardware(hardwareMap);
 		PersistentStorage.init(hardwareMap);
 		this.prettyTelem = new PrettyTelemetry(telemetry, PanelsTelemetry.INSTANCE.getFtcTelemetry());
+		frameworkInitialize();
 		onInitialize();
 	}
+
+	/**
+	 * Hook for framework-owned initialization that must happen before consumer setup.
+	 * Consumers should use {@link #onInitialize()} for their own setup.
+	 */
+	protected void frameworkInitialize(){}
 
 	/**
 	 * Hook for subclass-specific initialization after framework services and telemetry are ready.

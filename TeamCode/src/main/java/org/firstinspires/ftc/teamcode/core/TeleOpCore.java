@@ -11,10 +11,11 @@ public abstract class TeleOpCore extends OpModeCore {
 	protected final Gamepad previousGamepad2 = new Gamepad();
 
 	/**
-	 * Captures the starting controller state so button edge detection is valid on the first loop.
+	 * Captures the starting controller state before consumer initialization so button edge detection
+	 * is valid on the first loop. TeleOp consumers cannot override this framework step.
 	 */
 	@Override
-	protected void onInitialize(){
+	protected final void frameworkInitialize(){
 		//save the current gamepad states to compare against to avoid errors
 		previousGamepad1.copy(gamepad1);
 		previousGamepad2.copy(gamepad2);
