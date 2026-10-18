@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.core.implementations;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.core.OpModeCore;
@@ -10,7 +11,7 @@ import org.firstinspires.ftc.teamcode.hardware.SmartMotor;
 @TeleOp(name = "OmniMotorTest")
 public class OmniDriveTest extends OpModeCore {
 
-    private static final double maxSpeed = 0.5;
+    private static final double maxSpeed = 1;
 
     private final ElapsedTime tickTimer = new ElapsedTime();
 
@@ -21,10 +22,15 @@ public class OmniDriveTest extends OpModeCore {
 
     @Override
     protected void onInitialize() {
-        leftFrontMotor = hardware.getMotor("leftFrontMotor");
-        leftBackMotor = hardware.getMotor("leftBackMotor");
-        rightFrontMotor = hardware.getMotor("rightFrontMotor");
-        rightBackMotor = hardware.getMotor("rightBackMotor");
+        leftFrontMotor = hardware.getMotor("LFront");
+        leftBackMotor = hardware.getMotor("LRear");
+        rightFrontMotor = hardware.getMotor("RFront");
+        rightBackMotor = hardware.getMotor("RRear");
+
+        leftFrontMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftBackMotor.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightFrontMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBackMotor.setDirection(DcMotorSimple.Direction.FORWARD);
 
         leftFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFrontMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
