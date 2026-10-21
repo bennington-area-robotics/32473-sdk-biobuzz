@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.components;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import org.firstinspires.ftc.teamcode.hardware.Hardware;
 import org.firstinspires.ftc.teamcode.hardware.SmartMotor;
 
@@ -16,6 +17,11 @@ public class DriveBase {
         rightFront = hardware.getMotor("rightFrontMotor");
         rightBack = hardware.getMotor("rightBackMotor");
 
+        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
+
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -23,7 +29,7 @@ public class DriveBase {
     }
 
     public double[] scaledInputs(double x, double y, double turn) {
-        final double scale = 3;
+        final double scale = 2;
 
         return new double[]{
             scaleValue(x, scale) * powerFactor,
@@ -42,11 +48,11 @@ public class DriveBase {
         double scaledY = scaled[1];
         double scaledTurn = scaled[2];
 
-        double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(turn), 1);
-        double leftFront = ((-x + y - turn) / denominator) * powerFactor;
-        double leftBack = ((x + y - turn) / denominator) * powerFactor;
-        double rightFront = ((-x - y - turn) / denominator) * powerFactor;
-        double rightBack = ((x - y - turn) / denominator) * powerFactor;
+        double denominator = Math.max(Math.abs(scaledY) + Math.abs(scaledX) + Math.abs(scaledTurn), 1);
+        double leftFront = ((-scaledX + scaledY - scaledTurn) / denominator) * powerFactor;
+        double leftBack = ((scaledX + scaledY - scaledTurn) / denominator) * powerFactor;
+        double rightFront = ((-scaledX - scaledY - scaledTurn) / denominator) * powerFactor;
+        double rightBack = ((scaledX - scaledY - scaledTurn) / denominator) * powerFactor;
 
         setMotorPowers(leftFront, leftBack, rightFront, rightBack);
     }
