@@ -11,9 +11,7 @@ public class MinerTomTeleOp extends TeleOpCore {
     protected static DriveBase driveBase;
 
     @Override
-    protected void initialize() {
-        super.onInitialize();
-
+    protected void onInitialize() {
         try {
             driveBase = new DriveBase(hardware);
         } catch (Exception e) {

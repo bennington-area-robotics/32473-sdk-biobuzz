@@ -12,10 +12,10 @@ public class DriveBase {
     private double powerFactor = 0.5;
 
     public DriveBase(Hardware hardware) {
-        leftFront = hardware.getMotor("leftFrontMotor");
-        leftBack = hardware.getMotor("leftBackMotor");
-        rightFront = hardware.getMotor("rightFrontMotor");
-        rightBack = hardware.getMotor("rightBackMotor");
+        leftFront = hardware.getMotor("LFront");
+        leftBack = hardware.getMotor("LRear");
+        rightFront = hardware.getMotor("RFront");
+        rightBack = hardware.getMotor("RRear");
 
         leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -29,7 +29,7 @@ public class DriveBase {
     }
 
     public double[] scaledInputs(double x, double y, double turn) {
-        final double scale = 2;
+        final double scale = 3;
 
         return new double[]{
             scaleValue(x, scale) * powerFactor,
@@ -49,10 +49,10 @@ public class DriveBase {
         double scaledTurn = scaled[2];
 
         double denominator = Math.max(Math.abs(scaledY) + Math.abs(scaledX) + Math.abs(scaledTurn), 1);
-        double leftFront = ((-scaledX + scaledY - scaledTurn) / denominator) * powerFactor;
-        double leftBack = ((scaledX + scaledY - scaledTurn) / denominator) * powerFactor;
-        double rightFront = ((-scaledX - scaledY - scaledTurn) / denominator) * powerFactor;
-        double rightBack = ((scaledX - scaledY - scaledTurn) / denominator) * powerFactor;
+        double leftFront = ((-scaledX + scaledY - scaledTurn) / denominator);
+        double leftBack = ((scaledX + scaledY - scaledTurn) / denominator);
+        double rightFront = ((-scaledX - scaledY - scaledTurn) / denominator);
+        double rightBack = ((scaledX - scaledY - scaledTurn) / denominator);
 
         setMotorPowers(leftFront, leftBack, rightFront, rightBack);
     }
