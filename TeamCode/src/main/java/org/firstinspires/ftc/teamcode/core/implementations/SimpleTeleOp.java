@@ -1,41 +1,46 @@
 package org.firstinspires.ftc.teamcode.core.implementations;
 
+import com.pedropathing.drivetrain.DrivePowers;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.follower.ManualDrive;
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import org.firstinspires.ftc.teamcode.drive.DriveBase;
 import org.firstinspires.ftc.teamcode.core.SmartGamepad;
 import org.firstinspires.ftc.teamcode.core.TeleOpCore;
+import org.firstinspires.ftc.teamcode.drive.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.utilities.PrettyTelemetry;
 
 @TeleOp(name = "2 - Simple TeleOp")
 public class SimpleTeleOp extends TeleOpCore {
-    protected DriveBase driveBase;
+
+    Follower follower;
 
     @Override
     protected void onInitialize() {
-        //noinspection DuplicatedCode
 
-        try {
-            driveBase = new DriveBase(hardwareMap, true);
-        } catch (Exception e) {
-            prettyTelem.error("Drive base failed to initialize, skipping: " + e.getMessage());
-        }
-    }
+        follower = Constants.create(hardwareMap);
 
-    @Override
-    protected void onRun() {
-        driveBase.getFollower().startTeleOpDrive();
+        follower.setPose(new Pose(0, 0, 0));
+
+        prettyTelem.addData("Pos X", () -> follower.pose().x());
+        prettyTelem.addData("Pos Y", () -> follower.pose().y());
+        prettyTelem.addData("Heading", () -> follower.pose().heading());
     }
 
     @Override
     protected void checkGamepads(SmartGamepad gamepad1, SmartGamepad gamepad2) {
-        //noinspection DuplicatedCode
+        DrivePowers powers = ManualDrive.fieldCentric(
+                gamepad1.leftStickY,
+                gamepad1.leftStickX,
+                -gamepad1.rightStickX,
+                follower.pose().heading()
+        );
 
-        if (driveBase != null) {
-            driveBase.getFollower().setTeleOpDrive(-gamepad1.leftStickY, gamepad1.leftStickX, gamepad1.rightStickX);
-        }
+        follower.manual(powers);
     }
 
     @Override
     protected void onTick() {
-        driveBase.getFollower().update();
+        follower.update();
     }
 }
