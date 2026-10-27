@@ -592,4 +592,13 @@ public class SmartMotor extends Device implements DcMotorEx, Caching, WrappedDev
     public boolean isOverCurrent() {
         return motor.isOverCurrent();
     }
+
+    /**
+     * Resets the encoder position of this motor to zero.
+     */
+    public void resetEncoder() {
+        RunMode initial = motor.getMode();
+        motor.setMode(RunMode.STOP_AND_RESET_ENCODER);
+        motor.setMode(initial);
+    }
 }
