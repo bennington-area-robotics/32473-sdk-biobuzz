@@ -6,7 +6,7 @@ import org.firstinspires.ftc.teamcode.core.TeleOpCore;
 import org.firstinspires.ftc.teamcode.hardware.SmartMotor;
 import org.firstinspires.ftc.teamcode.hardware.SmartServo;
 
-@TeleOp(name = "Turret test")
+@TeleOp(name = "3 - Turret test")
 public class TurretTest extends TeleOpCore {
 
     private SmartMotor yawMotor;

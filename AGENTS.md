@@ -28,7 +28,7 @@
 - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/components/subsystems/`
   Coordination layers that sit above mechanisms, especially storage and firing logic.
 - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/hardware/`
-  Smart FTC hardware wrappers, cache management, and sensor configuration. Includes `hardware/controllers/` (PID family: `PID`, `DirectionalPID`, `VelocityPID`, `GravityPID`, `BangBangController`, `HybridController`) and `hardware/filters/` (`DataFilter`, `RollingAverage`).
+  Smart FTC hardware wrappers, cache management, and sensor configuration. Includes `hardware/controllers/` (PID family: `Turret`, `DirectionalPID`, `VelocityPID`, `GravityPID`, `BangBangController`, `HybridController`) and `hardware/filters/` (`DataFilter`, `RollingAverage`).
 - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/drive/`
   Drive configuration and Pedro Pathing constants.
 - `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/vision/`
