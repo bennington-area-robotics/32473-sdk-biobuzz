@@ -19,20 +19,19 @@ public class AimingTeleOp extends TeleOpCore {
 
     public static float degreesPerPitch = 270;
 
-
-    // Red Hive -X: x=-22, y=14
-    // Red Hive +X: x=22, y=14
-    // Blue Hive -X: x=-22, y=-14
-    // Blue Hive +X: x=22, y=-14
+    public AllianceColor allianceColor = AllianceColor.RED;
 
     private Pose negRedHive = new Pose(-22, 14);
+    private Pose posRedHive = new Pose(22, 14);
+    private Pose negBlueHive = new Pose(-22, -14);
+    private Pose posBlueHive = new Pose(22, -14);
 
     private Turret turret;
 
     private SmartMotor yawMotor;
     private SmartServo pitchServo;
 
-    private boolean fieldCentric = true;
+    private boolean fieldCentric = false;
 
     @Override
     protected void onInitialize() {
@@ -72,10 +71,13 @@ public class AimingTeleOp extends TeleOpCore {
             powers = new DrivePowers(-gamepad1.leftStickY, -gamepad1.leftStickX, -gamepad1.rightStickX);
         }
 
-        // Red Hive -X: x=-22, y=14
-        // Red Hive +X: x=22, y=14
-        // Blue Hive -X: x=-22, y=-14
-        // Blue Hive +X: x=22, y=-14
+       if (gamepad1.aPressed()) {
+           if (allianceColor == AllianceColor.BLUE) {
+               allianceColor = AllianceColor.RED;
+           } else {
+               allianceColor = AllianceColor.BLUE;
+           }
+       }
 
         if (gamepad1.rightBumperPressed()) {
             fieldCentric = !fieldCentric;
@@ -89,29 +91,38 @@ public class AimingTeleOp extends TeleOpCore {
         pitchServo.setPosition(0.5 + pitch/degreesPerPitch);
     }
 
-    public Pose getRelativePose(Pose start, Pose end) {
-        Pose relative = start.invert().compose(end);
+    public void updateTurret(Pose currentPose, Pose targetPose) {
+        double relativeX = targetPose.x() - currentPose.x();
+        double relativeY = targetPose.y() - currentPose.y();
 
-        double bearing = Math.atan2(relative.y(), relative.x());
+        double bearing = Math.toDegrees(Math.atan2(relativeX, relativeY));
 
-        return new Pose(relative.x(), relative.y(), bearing);
-    }
+        double distance = Math.sqrt(Math.pow(relativeX, 2) + Math.pow(relativeY, 2));
 
-    public void updateTurret(Pose currentPose) {
-        Pose aim = getRelativePose(currentPose, negRedHive);
-
-        double distance = Math.sqrt(Math.pow(aim.x(), 2) + Math.pow(aim.y(), 2));
-
-        double pitch = Math.atan2(distance,48);
-        double yaw = aim.heading();
+        double pitch = Math.toDegrees(Math.atan2(60,distance));
+        double yaw = bearing - 90 + Math.toDegrees(currentPose.heading());
 
         setTurretDirection(yaw, pitch);
+    }
+
+    public Pose getTargetHive(Pose currentPose, AllianceColor allianceColor) {
+        if (currentPose.x() > 0) {
+            return allianceColor == AllianceColor.BLUE ? posBlueHive : posRedHive;
+        } else {
+            return allianceColor == AllianceColor.BLUE ? negBlueHive : negRedHive;
+        }
     }
 
     @Override
     protected void onTick() {
         follower.update();
-        updateTurret(follower.pose());
+        Pose currentPose = follower.pose();
+        updateTurret(currentPose, getTargetHive(currentPose, allianceColor));
         turret.tick();
+    }
+
+    public enum AllianceColor {
+            BLUE,
+            RED
     }
 }

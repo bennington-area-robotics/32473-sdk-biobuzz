@@ -10,6 +10,9 @@ public class Turret {
 
     public static float kP = 0.01f, kI = 0, kD = 0.02f, kF = 0;
 
+    private double minAngle = -720;
+    private double maxAngle = 720;
+
     public static float ticksPerYawRevolution = 288;
 
     double targetPosition = 0;
@@ -29,8 +32,24 @@ public class Turret {
                 .build();
     }
 
+    private double unwrapTarget(double degrees, double currentAngle) {
+        double minK = Math.ceil((minAngle - degrees) / 360.0);
+        double maxK = Math.floor((maxAngle - degrees) / 360.0);
+
+        if (minK > maxK) {
+            return Math.abs(currentAngle - minAngle) < Math.abs(currentAngle - maxAngle)
+                    ? minAngle
+                    : maxAngle;
+        }
+
+        double k = Math.round((currentAngle - degrees) / 360.0);
+        k = Math.max(minK, Math.min(maxK, k));
+
+        return degrees + (360.0 * k);
+    }
+
     public void setTargetPosition(double degrees) {
-        targetPosition = degrees;
+        targetPosition = unwrapTarget(degrees, getCurrentPosition());
     }
 
     public double getTargetPosition() {
