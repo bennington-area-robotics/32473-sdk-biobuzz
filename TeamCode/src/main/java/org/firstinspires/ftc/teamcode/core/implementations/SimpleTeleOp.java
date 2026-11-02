@@ -29,12 +29,7 @@ public class SimpleTeleOp extends TeleOpCore {
 
     @Override
     protected void checkGamepads(SmartGamepad gamepad1, SmartGamepad gamepad2) {
-        DrivePowers powers = ManualDrive.fieldCentric(
-                gamepad1.leftStickY,
-                gamepad1.leftStickX,
-                -gamepad1.rightStickX,
-                follower.pose().heading()
-        );
+        DrivePowers powers = new DrivePowers(-gamepad1.leftStickY, -gamepad1.leftStickX, -gamepad1.rightStickX);
 
         follower.manual(powers);
     }
